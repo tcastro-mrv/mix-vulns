@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha",
-    "build": "mkdir -p dist && cp -r dist/"
+    "build": "mkdir -p dist && cp -r *.js *.json dist/"
   },
   "dependencies": {
     "algo-httpserv": "1.1.1",
