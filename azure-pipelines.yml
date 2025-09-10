@@ -6,7 +6,7 @@ pool:
 
 variables:
   projectName: 'example-javascript-vulnerable-methods'
-  VERACODE_SCA_TOKEN: $(VERACODE_SCA_TOKEN)
+  # Nota: VERACODE_SCA_TOKEN deve ser configurado como variável secreta no Azure DevOps
 
 steps:
 # 1. Instalar Node.js
@@ -19,11 +19,17 @@ steps:
 - script: npm install
   displayName: 'Instalar dependências'
 
-# 3. Rodar o build (certifique-se de ter "build": "algum comando" no package.json)
+# 3. Rodar o build
 - script: npm run build
   displayName: 'Executar build'
 
-# 4. Empacotar a build (supondo que a build gera uma pasta "dist")
+# 4. Verificar criação da pasta dist
+- script: |
+    ls -la dist || echo "A pasta dist não foi criada corretamente"
+  displayName: 'Verificar pasta dist'
+  condition: always()
+
+# 5. Empacotar a build
 - task: ArchiveFiles@2
   displayName: 'Empacotar artefato de build'
   inputs:
@@ -33,27 +39,36 @@ steps:
     archiveFile: '$(Build.ArtifactStagingDirectory)/$(projectName)-sca.zip'
     replaceExistingArchive: true
 
-# 5. Publicar artefato para uso em outros stages/jobs
+# 6. Publicar artefato para uso em outros stages/jobs
 - task: PublishBuildArtifacts@1
   displayName: 'Publicar artefato'
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(projectName)-sca.zip'
     ArtifactName: 'veracode-sca-scan'
 
-# 6. Extrair o artefato para análise SCA
-- task: ExtractFiles@1
-  displayName: 'Extrair artefato para análise SCA'
-  inputs:
-      archiveFilePatterns: '$(System.ArtifactsDirectory)/veracode-sca-scan/$(projectName)-sca.zip'
-      destinationFolder: '$(System.ArtifactsDirectory)/sca-scan-extracted'
-      cleanDestinationFolder: true
-
-# 7. Rodar Veracode SCA Agent na pasta extraída
+# 7. Opção 1: Rodar Veracode SCA Agent diretamente na pasta dist
 - script: |
     export SRCCLR_API_TOKEN=$(VERACODE_SCA_TOKEN)
     export JAVA_TOOL_OPTIONS="-Xmx4096m"
-    cd $(System.ArtifactsDirectory)/sca-scan-extracted
+    cd $(System.DefaultWorkingDirectory)/dist
     curl -sSL -k https://download.sourceclear.com/ci.sh | bash -s -- scan --allow-dirty
-  displayName: 'Rodar Veracode SCA Agent Analysis'
+  displayName: 'Rodar Veracode SCA Agent Analysis na pasta dist'
   env:
     VERACODE_SCA_TOKEN: $(VERACODE_SCA_TOKEN)
+
+# Opção 2 (comentada): Se precisar extrair o artefato publicado (em jobs ou stages diferentes)
+# - task: ExtractFiles@1
+#   displayName: 'Extrair artefato para análise SCA'
+#   inputs:
+#     archiveFilePatterns: '$(Build.ArtifactStagingDirectory)/$(projectName)-sca.zip'
+#     destinationFolder: '$(System.ArtifactsDirectory)/sca-scan-extracted'
+#     cleanDestinationFolder: true
+# 
+# - script: |
+#     export SRCCLR_API_TOKEN=$(VERACODE_SCA_TOKEN)
+#     export JAVA_TOOL_OPTIONS="-Xmx4096m"
+#     cd $(System.ArtifactsDirectory)/sca-scan-extracted
+#     curl -sSL -k https://download.sourceclear.com/ci.sh | bash -s -- scan --allow-dirty
+#   displayName: 'Rodar Veracode SCA Agent Analysis'
+#   env:
+#     VERACODE_SCA_TOKEN: $(VERACODE_SCA_TOKEN)
