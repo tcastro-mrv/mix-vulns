@@ -1,24 +1,59 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
   vmImage: 'ubuntu-latest'
 
+variables:
+  projectName: 'example-javascript-vulnerable-methods'
+  VERACODE_SCA_TOKEN: $(VERACODE_SCA_TOKEN)
+
 steps:
+# 1. Instalar Node.js
 - task: NodeTool@0
   inputs:
-    versionSpec: '18.x' 
+    versionSpec: '18.x'
   displayName: 'Instalar Node.js'
 
+# 2. Instalar dependências
 - script: npm install
   displayName: 'Instalar dependências'
 
-- script: npm test
-  displayName: 'Executar testes'
+# 3. Rodar o build (certifique-se de ter "build": "algum comando" no package.json)
+- script: npm run build
+  displayName: 'Executar build'
 
+# 4. Empacotar a build (supondo que a build gera uma pasta "dist")
+- task: ArchiveFiles@2
+  displayName: 'Empacotar artefato de build'
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)/dist'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/$(projectName)-sca.zip'
+    replaceExistingArchive: true
 
+# 5. Publicar artefato para uso em outros stages/jobs
+- task: PublishBuildArtifacts@1
+  displayName: 'Publicar artefato'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(projectName)-sca.zip'
+    ArtifactName: 'veracode-sca-scan'
+
+# 6. Extrair o artefato para análise SCA
+- task: ExtractFiles@1
+  displayName: 'Extrair artefato para análise SCA'
+  inputs:
+    archiveFilePatterns: '$(Pipeline.Workspace)/veracode-sca-scan/$(projectName)-sca.zip'
+    destinationFolder: '$(Pipeline.Workspace)/sca-scan-extracted'
+    cleanDestinationFolder: true
+
+# 7. Rodar Veracode SCA Agent na pasta extraída
+- script: |
+    export SRCCLR_API_TOKEN=$(VERACODE_SCA_TOKEN)
+    export JAVA_TOOL_OPTIONS="-Xmx4096m"
+    cd $(Pipeline.Workspace)/sca-scan-extracted
+    curl -sSL -k https://download.sourceclear.com/ci.sh | bash -s -- scan --allow-dirty
+  displayName: 'Rodar Veracode SCA Agent Analysis'
+  env:
+    VERACODE_SCA_TOKEN: $(VERACODE_SCA_TOKEN)
