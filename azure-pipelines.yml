@@ -44,15 +44,15 @@ steps:
 - task: ExtractFiles@1
   displayName: 'Extrair artefato para análise SCA'
   inputs:
-    archiveFilePatterns: '$(Pipeline.Workspace)/veracode-sca-scan/$(projectName)-sca.zip'
-    destinationFolder: '$(Pipeline.Workspace)/sca-scan-extracted'
-    cleanDestinationFolder: true
+      archiveFilePatterns: '$(System.ArtifactsDirectory)/veracode-sca-scan/$(projectName)-sca.zip'
+      destinationFolder: '$(System.ArtifactsDirectory)/sca-scan-extracted'
+      cleanDestinationFolder: true
 
 # 7. Rodar Veracode SCA Agent na pasta extraída
 - script: |
     export SRCCLR_API_TOKEN=$(VERACODE_SCA_TOKEN)
     export JAVA_TOOL_OPTIONS="-Xmx4096m"
-    cd $(Pipeline.Workspace)/sca-scan-extracted
+    cd $(System.ArtifactsDirectory)/sca-scan-extracted
     curl -sSL -k https://download.sourceclear.com/ci.sh | bash -s -- scan --allow-dirty
   displayName: 'Rodar Veracode SCA Agent Analysis'
   env:
