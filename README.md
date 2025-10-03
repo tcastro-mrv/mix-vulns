@@ -1,4 +1,4 @@
-# [:] Example node project with vulnerable methods
+# mix-vulns - Vulnerable Methods POC
 
 A node project to demonstrate srcclr agent's vulnerable methods feature for JavaScript
 
